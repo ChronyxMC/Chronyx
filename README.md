@@ -1,4 +1,4 @@
-## Baguette - an example canvas fork
+## Baguette - an example Canvas fork
 
 This repo showcases an example fork of Canvas using [Weaver](https://github.com/CraftCanvasMC/Weaver).
 
