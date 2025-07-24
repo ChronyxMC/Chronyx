@@ -97,6 +97,12 @@ allprojects {
     tasks.withType<RebuildGitPatches>().configureEach {
         filterPatches = true
     }
+    // Note: In default paperweight there's no such thing as filtering per-file patches as there's no need for it
+    // but due to our changes it is possible to encounter a rare edge case (that also exists in pw but is unreachable) where there are per-file patches generated for files that you didn't make changes to
+    // It only happens when there are empty files created in base patches, as the version of our diff library produces patches even when the base source and modified source dont differ but both contain an empty file
+    tasks.withType<RebuildFilePatches>().configureEach {
+        filterPatches = true
+    }
     // This block on the other hand showcases how to enable an opt-in property which changes the way base and feature patches apply;
     // By default when there are conflicts the patch fails to apply *completely* and doesn't continue the apply when there is even one conflicting hunk detected in a 100
     // The `emitRejects` property allows to change it to make it instead *always* continue the apply even when most hunks dont apply and leaves it in a partially applied state while emitting .rej files next to and named the same as the file in which the hunk failed
@@ -107,12 +113,6 @@ allprojects {
     }
     tasks.withType<ApplyFeaturePatches>().configureEach {
         emitRejects = false
-    }
-    // Note: In default paperweight there's no such thing as filtering per-file patches as there's no need for it
-    // but due to our changes it is possible to encounter a rare edge case (that also exists in pw but is unreachable) where there are per-file patches generated for files that you didn't make changes to
-    // It only happens when there are empty files created in base patches, as the version of our diff library produces patches even when the base source and modified source dont differ but both contain an empty file
-    tasks.withType<RebuildFilePatches>().configureEach {
-        filterPatches = true
     }
 }
 
