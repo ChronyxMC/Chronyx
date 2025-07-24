@@ -4,15 +4,15 @@
  
  public final class FeatureHooks {
  
-+    // Baguette start - our functions are better!
++    // Baguette start - we never stop appreciating baguettes
 +    public static void ouiOuiBaguette(final boolean oui) {
-+        if (oui) {
++        if (!oui) {
 +            System.out.println("We don't like you");
 +        } else { 
 +            System.out.println("Oui!");
 +        }
 +    }
-+    // Baguette (don't) end - we never stop appreciating baguettes
++    // Baguette end - we never stop appreciating baguettes
      // this includes non-accessible entities
      public static Iterable<Entity> getAllEntities(final net.minecraft.server.level.ServerLevel world) {
          return ((ca.spottedleaf.moonrise.patches.chunk_system.level.entity.EntityLookup)world.getEntities()).getAllMapped(); // Paper - rewrite chunk system

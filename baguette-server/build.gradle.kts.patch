@@ -1,6 +1,6 @@
 --- a/canvas-server/build.gradle.kts
 +++ b/canvas-server/build.gradle.kts
-@@ -38,12 +_,12 @@
+@@ -38,6 +_,7 @@
  
      val canvas = forks.register("canvas") {
          forks = fork
@@ -8,12 +8,6 @@
          upstream.patchRepo("paperServer") {
              upstreamRepo = fork.patchedRepo("paperServer")
              patchesDir = rootDirectory.dir("canvas-server/paper-patches")
-             outputDir = rootDirectory.dir("paper-server")
-         }
--
-         upstream.patchDir("foliaServer") {
-             upstreamPath = "folia-server"
-             excludes = setOf("src/minecraft", "paper-patches", "minecraft-patches", "build.gradle.kts", "build.gradle.kts.patch")
 @@ -52,7 +_,27 @@
          }
      }
@@ -64,8 +58,8 @@
  }
  
  dependencies {
--    implementation(projects.canvasApi) // Canvas - Rebrand
-+    implementation(projects.baguetteApi) // Canvas - Rebrand // Baguette - Rebrand
+-    implementation(projects.canvasApi)
++    implementation(projects.baguetteApi)
      implementation("ca.spottedleaf:concurrentutil:0.0.3")
      implementation("org.jline:jline-terminal-ffm:3.27.1") // use ffm on java 22+
      implementation("org.jline:jline-terminal-jni:3.27.1") // fall back to jni on java 21
@@ -89,14 +83,9 @@
              "Build-Number" to (build ?: ""),
              "Build-Time" to buildTime.toString(),
              "Git-Branch" to gitBranch,
-@@ -350,11 +_,12 @@
-         .asFile
-     javaLauncher.set(project.javaToolchains.launcherFor {
-         languageVersion.set(JavaLanguageVersion.of(21))
--        vendor.set(JvmVendorSpec.GRAAL_VM)
-+        vendor.set(JvmVendorSpec.JETBRAINS)
+@@ -353,8 +_,8 @@
+         vendor.set(JvmVendorSpec.GRAAL_VM)
      })
-+    jvmArgs("-XX:+AllowEnhancedClassRedefinition")
  
 -    if (rootProject.childProjects["canvas-test-plugin"] != null) {
 -        val testPluginJar = rootProject.project(":canvas-test-plugin").tasks.jar.flatMap { it.archiveFile }

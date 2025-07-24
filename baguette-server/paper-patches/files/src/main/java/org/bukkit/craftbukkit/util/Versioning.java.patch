@@ -5,7 +5,7 @@
          String result = "Unknown-Version";
  
 -        InputStream stream = Bukkit.class.getClassLoader().getResourceAsStream("META-INF/maven/io.canvasmc.canvas/canvas-api/pom.properties"); // Folia // Canvas - Rebrand
-+        InputStream stream = Bukkit.class.getClassLoader().getResourceAsStream("META-INF/maven/io.canvasmc.baguette/baguette-api/pom.properties"); // Folia // Canvas - Rebrand // Baguette
++        InputStream stream = Bukkit.class.getClassLoader().getResourceAsStream("META-INF/maven/io.canvasmc.baguette/baguette-api/pom.properties"); // Folia // Canvas - Rebrand // Baguette - Rebrand
          Properties properties = new Properties();
  
          if (stream != null) {
