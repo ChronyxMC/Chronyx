@@ -1,0 +1,18 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Toffikk <slodkitofik@gmail.com>
+Date: Thu, 24 Jul 2025 21:37:59 +0200
+Subject: [PATCH] feature panic
+
+
+diff --git a/net/minecraft/CrashReport.java b/net/minecraft/CrashReport.java
+index 3e0e88afcf010d9a3d46e48bca5cbdf98fe97544..92efa7bff25e5b8abea6673277e9a80d0ec5fb86 100644
+--- a/net/minecraft/CrashReport.java
++++ b/net/minecraft/CrashReport.java
+@@ -221,6 +221,6 @@ public class CrashReport {
+ 
+     public static void preload() {
+         //MemoryReserve.allocate(); // Paper - Disable memory reserve allocating
+-        new CrashReport("Don't panic!", new Throwable()).getFriendlyReport(ReportType.CRASH);
++        new CrashReport("Do panic!", new Throwable()).getFriendlyReport(ReportType.CRASH); // Baguette - panic.
+     }
+ }
