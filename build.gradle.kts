@@ -88,9 +88,9 @@ subprojects {
     }
 }
 allprojects {
-    // This block is for the "filter patches" setting
-    // The filter patches setting controls whether empty patches should be deleted automatically or not
-    // This settings default to true but it can sometimes break git's 3way
+    // This block controls the patch filtering setting
+    // It controls whether empty patches should be deleted automatically or kept
+    // the default value is true but it can sometimes break git's 3way apply in rare cases, so it's left configurable
     tasks.withType<RebuildBaseGitPatches>().configureEach {
         filterPatches = true
     }
@@ -98,16 +98,19 @@ allprojects {
         filterPatches = true
     }
     // Note: In default paperweight there's no such thing as filtering per-file patches as there's no need for it
-    // but due to our changes it is possible to encounter a rare edge case (that also exists in pw but is unreachable) where there are per-file patches generated for files that you didn't make changes to
-    // It only happens when there are empty files created in base patches, as the version of our diff library produces patches even when the base source and modified source dont differ but both contain an empty file
+    // but due to our changes, it is possible to encounter a rare edge case (that also exists in pw but is unreachable) where there are empty per-file patches generated for files that you didn't make changes to
+    // This only happens when there are empty files created in base patches, as the version of our diff library produces patches even when the base source and modified source don't differ but both contain an empty file
     tasks.withType<RebuildFilePatches>().configureEach {
         filterPatches = true
     }
-    // This block on the other hand showcases how to enable an opt-in property which changes the way base and feature patches apply;
-    // By default when there are conflicts the patch fails to apply *completely* and doesn't continue the apply when there is even one conflicting hunk detected in a 100
-    // The `emitRejects` property allows to change it to make it instead *always* continue the apply even when most hunks dont apply and leaves it in a partially applied state while emitting .rej files next to and named the same as the file in which the hunk failed
-    // It can be useful if you have a lot of involving patches that break on upstream updates frequently, so this way everything that can apply, gets applied and the rest is emitted as .rej files you can apply manually while the patch application is paused and later just continue the git am session
-    // there are also more verbose details provided in the log file, such as the exact code snippets; see the console output on where to find it
+    // This block on the other hand showcases how to enable an opt-in property which changes the way base and feature patches apply.
+    // By default when there are any apply conflicts, the patch fails to apply *completely* and doesn't continue the apply.
+    // The `emitRejects` property allows to change this behaviour to make it instead *always* continue the apply, even when most hunks didn't apply
+    // and leaves the repository in a partially applied state, while emitting `.rej` files which contain failed hunks, each named by the file the failed hunk was modifying
+    // This behaviour can be useful in case you have a lot of involving patches that break on upstream updates frequently, so this way everything that can apply, gets applied and the unapplied parts
+    // are emitted as .rej files, you can apply manually and then continue the `git am` session after you've done the manual apply
+    // There are also more verbose details provided in the log file, such as the exact code snippets; see the console output on where to find it
+    // note: it is important you *don't* forget to remove the leftover `.rej` files as they WILL be added to your patch when you use `git add .` if you don't remove them
     tasks.withType<ApplyBasePatches>().configureEach {
         emitRejects = false
     }
@@ -117,8 +120,10 @@ allprojects {
 }
 
 // Weaver also provides an useful `build(Mojmap/Reobf)PublisherJar` task which generates a paperclip jar with the build number or whatever input you give it
-// An example configuration is shown here
-
+// The default output of the task is determined as follows: `[project name lowercase]-build.[the build number or local when there's none].jar`
+// Following that, we can deduct that the name for our Baguette fork would be either `baguette-build.1.jar` or `baguette-build.local.jar` when there's no `BUILD_NUMBER` environment variable set
+// An example *custom* configuration is shown here
+/*
 // custom input for publisherJar
 val buildNumber = providers.environmentVariable("BUILD_NUM").orElse("no-build")
 val jarName = buildNumber.map { build -> "libs/output-$build-test.jar" }
@@ -128,7 +133,4 @@ subprojects {
         outputZip.set(layout.buildDirectory.file(jarName))
     }
 }
-// The default output of the task is as follows `[project name lowercased]-build.[the build number or local when there's none].jar`
-// Following that, we can deduct that the name for our Baguette fork would be as follows `baguette-build.1.jar` or `baguette-build.local.jar` when in a dev environment
-// The build number by default is taken from the environment variable `BUILD_NUMBER`
-// If you wish to keep it just delete this block
+*/
