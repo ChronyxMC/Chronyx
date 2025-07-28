@@ -9,7 +9,7 @@ import io.papermc.paperweight.tasks.CreatePublisherJar
 
 plugins {
     java
-    id("io.canvasmc.weaver.patcher") version "2.1.5-SNAPSHOT" // always keep in check with canvas' actual used release
+    id("io.canvasmc.weaver.patcher") version "2.2.0-SNAPSHOT" // always keep in check with canvas' actual used release
 }
 
 val paperMavenPublicUrl = "https://repo.papermc.io/repository/maven-public/"
@@ -32,17 +32,26 @@ paperweight {
         patchRepo("paperApi") {
             upstreamPath = "paper-api"
             patchesDir = file("baguette-api/paper-patches")
+            additionalAts?.set(file("build-data/baguette-paperapi.at")) // custom at for paper-api sources
+            // This line above and the relevant lines below allow us to specify ATs for non-minecraft sources thanks to weaver.
+            // You can set all relevant lines here and in the server build file to the same at file eg. `baguette.at`, however doing that is *discouraged*
+            // due to us possibly enabling AT validation in the future, which would result in errors when an AT cannot apply.
+            // Setting each patch set to have its own AT file is good practice and should futureproof you from any inconveniences further down the line, should we change anything.
+            // If additionalAts is not specified, weaver *won't* fallback to the general AT file due to the aforementioned reasons
+            // An important behavior change compared to paperweight in regards to the minecraft AT file is the added possibility to specify ats for libraries instead of having to patch them manually.
             outputDir = file("paper-api")
         }
         patchRepo("foliaApi") {
             upstreamPath = "folia-api"
             patchesDir = file("baguette-api/folia-patches")
+            additionalAts?.set(file("build-data/baguette-foliaapi.at")) // custom at for folia-api sources
             outputDir = file("folia-api")
         }
         patchDir("canvasApi") {
             upstreamPath = "canvas-api"
             excludes = listOf("build.gradle.kts", "build.gradle.kts.patch", "paper-patches", "folia-patches")
             patchesDir = file("baguette-api/canvas-patches")
+            additionalAts?.set(file("build-data/baguette-canvasapi.at")) // custom at for canvas-api sources
             outputDir = file("canvas-api")
 	}
     }
