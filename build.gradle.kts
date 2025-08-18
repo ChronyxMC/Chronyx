@@ -3,13 +3,12 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 import io.papermc.paperweight.core.tasks.patching.ApplyBasePatches
 import io.papermc.paperweight.core.tasks.patching.ApplyFeaturePatches
 import io.papermc.paperweight.tasks.RebuildBaseGitPatches
-import io.papermc.paperweight.core.tasks.patching.RebuildFilePatches
 import io.papermc.paperweight.tasks.RebuildGitPatches
 import io.papermc.paperweight.tasks.CreatePublisherJar
 
 plugins {
     java
-    id("io.canvasmc.weaver.patcher") version "2.2.0-SNAPSHOT" // always keep in check with canvas' actual used release
+    id("io.canvasmc.weaver.patcher") version "2.2.2-SNAPSHOT" // always keep in check with canvas' actual used release
 }
 
 val paperMavenPublicUrl = "https://repo.papermc.io/repository/maven-public/"
@@ -106,12 +105,7 @@ allprojects {
     tasks.withType<RebuildGitPatches>().configureEach {
         filterPatches = true
     }
-    // Note: In default paperweight there's no such thing as filtering per-file patches as there's no need for it
-    // but due to our changes, it is possible to encounter a rare edge case (that also exists in pw but is unreachable) where there are empty per-file patches generated for files that you didn't make changes to
-    // This only happens when there are empty files created in base patches, as the version of our diff library produces patches even when the base source and modified source don't differ but both contain an empty file
-    tasks.withType<RebuildFilePatches>().configureEach {
-        filterPatches = true
-    }
+
     // This block on the other hand showcases how to enable an opt-in property which changes the way base and feature patches apply.
     // By default when there are any apply conflicts, the patch fails to apply *completely* and doesn't continue the apply.
     // The `emitRejects` property allows to change this behaviour to make it instead *always* continue the apply, even when most hunks didn't apply
@@ -143,3 +137,4 @@ subprojects {
     }
 }
 */
+
