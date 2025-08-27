@@ -3,7 +3,7 @@
 @@ -28,6 +_,12 @@
       */
      Key BRAND_CANVAS_ID = Key.key("canvasmc", "canvas");
-     // Canvas end
+     // Canvas end - Rebrand
 +    // Baguette start - Rebrand
 +    /**
 +     * The brand id for Baguette.
