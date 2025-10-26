@@ -3,7 +3,7 @@ import java.util.Locale
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        maven("https://maven.canvasmc.io/snapshots")
+        maven("https://maven.canvasmc.io/releases")
     }
 }
 

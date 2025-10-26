@@ -8,14 +8,13 @@ import io.papermc.paperweight.tasks.CreatePublisherJar
 
 plugins {
     java
-    id("io.canvasmc.weaver.patcher") version "2.3.2-SNAPSHOT" // always keep in check with canvas' actual used release
+    id("io.canvasmc.weaver.patcher") version "2.3.10" // always keep in check with canvas's actual used release
 }
 
 val paperMavenPublicUrl = "https://repo.papermc.io/repository/maven-public/"
 
 paperweight {
-    upstreams.register("canvas") {
-        repo = github("CraftCanvasMC", "Canvas")
+    upstreams.canvas {
         ref = providers.gradleProperty("canvasCommit")
 
         patchFile {
@@ -31,7 +30,7 @@ paperweight {
         patchRepo("paperApi") {
             upstreamPath = "paper-api"
             patchesDir = file("baguette-api/paper-patches")
-            additionalAts?.set(file("build-data/baguette-paperapi.at")) // custom at for paper-api sources
+            additionalAts = file("build-data/baguette-paperapi.at") // custom at for paper-api sources
             // This line above and the relevant lines below allow us to specify ATs for non-minecraft sources thanks to weaver.
             // You can set all relevant lines here and in the server build file to the same at file eg. `baguette.at`, however doing that is *discouraged*
             // due to us possibly enabling AT validation in the future, which would result in errors when an AT cannot apply.
@@ -40,11 +39,17 @@ paperweight {
             // An important behavior change compared to paperweight in regards to the minecraft AT file is the added possibility to specify ats for libraries instead of having to patch them manually.
             outputDir = file("paper-api")
         }
+        patchRepo("foliaApi") {
+            upstreamPath = "folia-api"
+            patchesDir = file("baguette-api/folia-patches")
+            additionalAts = file("build-data/baguette-foliaapi.at") // custom at for folia-api sources
+            outputDir = file("folia-api")
+        }
         patchDir("canvasApi") {
             upstreamPath = "canvas-api"
-            excludes = listOf("build.gradle.kts", "build.gradle.kts.patch", "paper-patches")
+            excludes = listOf("build.gradle.kts", "build.gradle.kts.patch", "paper-patches", "folia-patches")
             patchesDir = file("baguette-api/canvas-patches")
-            additionalAts?.set(file("build-data/baguette-canvasapi.at")) // custom at for canvas-api sources
+            additionalAts = file("build-data/baguette-canvasapi.at") // custom at for canvas-api sources
             outputDir = file("canvas-api")
 	}
     }
@@ -116,7 +121,7 @@ allprojects {
     }
 }
 
-// Weaver also provides an useful `build(Mojmap/Reobf)PublisherJar` task which generates a paperclip jar with the build number or whatever input you give it
+// Weaver also provides an useful `create(Mojmap/Reobf)PublisherJar` task which generates a paperclip jar with the build number or whatever input you give it
 // The default output of the task is determined as follows: `[project name lowercase]-build.[the build number or local when there's none].jar`
 // Following that, we can deduct that the name for our Baguette fork would be either `baguette-build.1.jar` or `baguette-build.local.jar` when there's no `BUILD_NUMBER` environment variable set
 // An example *custom* configuration is shown here
