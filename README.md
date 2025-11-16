@@ -10,19 +10,7 @@
 
 ### Built on Canvas Build #557
 - Chronyx is built on top of Canvas build #557, inheriting all of Canvas's performance optimizations including the rewritten scheduler and optimized chunk generation.
-
-### Additional Performance Improvements
-- Chronyx adds additional performance patches and optimizations on top of Canvas's already excellent performance baseline.
-
-### Extensive Configuration
-- Fine-tune aspects of your server with fully documented configuration options and performance settings inherited from Canvas.
-
-### Proper Region Profiling
-- Includes Canvas's genuine Spark profiler that is fully compatible with region threading.
-
-### Powerful and Optimized
-- Building on Canvas's stability and bug fixes, Chronyx delivers a high-performance, stable, and reliable experience with additional enhancements.
-
+- It aims to be extremely stable.
 ---
 
 ## Getting Started
