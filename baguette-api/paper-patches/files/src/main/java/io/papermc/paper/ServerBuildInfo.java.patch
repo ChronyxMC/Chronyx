@@ -8,7 +8,7 @@
 +    /**
 +     * The brand id for Baguette.
 +     */
-+    Key BRAND_BAGUETTE_ID = Key.key("canvasmc", "baguette");
++    Key BRAND_BAGUETTE_ID = Key.key("canvasmc", "chronyx");
 +    // Baguette end - Rebrand
  
      /**

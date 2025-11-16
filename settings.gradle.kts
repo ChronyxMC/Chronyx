@@ -13,7 +13,7 @@ plugins {
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-rootProject.name = "baguette"
+rootProject.name = "chronyx"
 for (name in listOf("baguette-api", "baguette-server")) {
     val projName = name.lowercase(Locale.ENGLISH)
     include(projName)
