@@ -15,7 +15,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 rootProject.name = "chronyx"
 for (name in listOf("baguette-api", "baguette-server")) {
-    val projName = name.lowercase(Locale.ENGLISH)
+    val projName = name.replace("baguette", "chronyx").lowercase(Locale.ENGLISH)
     include(projName)
     findProject(":$projName")!!.projectDir = file(name)
 }
