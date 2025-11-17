@@ -6,15 +6,14 @@ build
 
 /run
 
-/baguette-server/build.gradle.kts
-/baguette-server/src/minecraft
-/baguette-api/build.gradle.kts
-/canvas-api
-/canvas-server
+/canvas-server/build.gradle.kts
+/canvas-server/src/minecraft
+/canvas-api/build.gradle.kts
 /folia-api
 /folia-server
 /paper-server
 /paper-api
+/generated-patches
 
 .idea/
 /local/

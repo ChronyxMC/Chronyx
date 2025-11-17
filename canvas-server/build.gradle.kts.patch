@@ -1,0 +1,202 @@
+--- a/folia-server/build.gradle.kts
++++ b/folia-server/build.gradle.kts
+@@ -1,6 +_,7 @@
+ import io.papermc.fill.model.BuildChannel
+ import io.papermc.paperweight.attribute.DevBundleOutput
+ import io.papermc.paperweight.util.*
++import io.papermc.paperweight.util.constants.MACHE_PARAM_MAPPINGS_CONFIG
+ import io.papermc.paperweight.util.data.FileEntry
+ import paper.libs.com.google.gson.annotations.SerializedName
+ import java.time.Instant
+@@ -10,7 +_,7 @@
+     `java-library`
+     `maven-publish`
+     idea
+-    id("io.papermc.paperweight.core")
++    id("io.canvasmc.weaver.core")
+     id("io.papermc.fill.gradle") version "1.0.7"
+ }
+ 
+@@ -35,7 +_,26 @@
+         }
+     }
+ 
+-    activeFork = fork
++    val canvas = forks.register("canvas") {
++        forks = fork
++        javadocMappings(configurations.named(MACHE_PARAM_MAPPINGS_CONFIG))
++        upstream.patchRepo("paperServer") {
++            upstreamRepo = fork.patchedRepo("paperServer")
++            patchesDir = rootDirectory.dir("canvas-server/paper-patches")
++            additionalAts = rootDirectory.file("build-data/canvas.at")
++            outputDir = rootDirectory.dir("paper-server")
++        }
++
++        upstream.patchDir("foliaServer") {
++            upstreamPath = "folia-server"
++            excludes = setOf("src/minecraft", "paper-patches", "minecraft-patches", "build.gradle.kts", "build.gradle.kts.patch")
++            patchesDir = rootDirectory.dir("canvas-server/folia-patches")
++            additionalAts = rootDirectory.file("build-data/canvas.at")
++            outputDir = rootDirectory.dir("folia-server")
++        }
++    }
++
++    activeFork = canvas
+ 
+ 
+     spigot {
+@@ -73,7 +_,7 @@
+ }
+ val services = objects.newInstance<Services>()
+ 
+-if (project.providers.gradleProperty("publishDevBundle").isPresent) {
++if (true) {
+     val devBundleComponent = services.softwareComponentFactory.adhoc("devBundle")
+     components.add(devBundleComponent)
+ 
+@@ -123,10 +_,14 @@
+     main {
+         java { srcDir("../paper-server/src/main/java"); srcDir("../paper-server/src/generated/java") }
+         resources { srcDir("../paper-server/src/main/resources") }
++        java { srcDir("../folia-server/src/main/java") }
++        resources { srcDir("../folia-server/src/main/resources") }
+     }
+     test {
+         java { srcDir("../paper-server/src/test/java") }
+         resources { srcDir("../paper-server/src/test/resources") }
++        java { srcDir("../folia-server/src/test/java") }
++        resources { srcDir("../folia-server/src/test/resources") }
+     }
+ }
+ val log4jPlugins = sourceSets.create("log4jPlugins") {
+@@ -153,7 +_,7 @@
+ }
+ 
+ dependencies {
+-    implementation(project(":folia-api"))
++    implementation(projects.canvasApi)
+     implementation("ca.spottedleaf:concurrentutil:0.0.3")
+     implementation("org.jline:jline-terminal-ffm:3.27.1") // use ffm on java 22+
+     implementation("org.jline:jline-terminal-jni:3.27.1") // fall back to jni on java 21
+@@ -175,7 +_,7 @@
+     implementation("com.velocitypowered:velocity-native:3.4.0-SNAPSHOT") {
+         isTransitive = false
+     }
+-    implementation("io.netty:netty-codec-haproxy:4.1.118.Final") // Add support for proxy protocol
++    implementation("io.netty:netty-codec-haproxy:4.1.118.Final") // Add support for proxy protocol // bump depend
+     implementation("org.apache.logging.log4j:log4j-iostreams:2.24.1")
+     implementation("org.ow2.asm:asm-commons:9.8")
+     implementation("org.spongepowered:configurate-yaml:4.2.0")
+@@ -224,14 +_,14 @@
+         val gitBranch = git.exec(providers, "rev-parse", "--abbrev-ref", "HEAD").get().trim()
+         attributes(
+             "Main-Class" to "org.bukkit.craftbukkit.Main",
+-            "Implementation-Title" to "Folia",
++            "Implementation-Title" to "Chronyx",
+             "Implementation-Version" to implementationVersion,
+             "Implementation-Vendor" to date,
+-            "Specification-Title" to "Folia",
++            "Specification-Title" to "Chronyx",
+             "Specification-Version" to project.version,
+-            "Specification-Vendor" to "Paper Team",
+-            "Brand-Id" to "papermc:folia",
+-            "Brand-Name" to "Folia",
++            "Specification-Vendor" to "Chronyx Team",
++            "Brand-Id" to "chronyxmc:chronyx",
++            "Brand-Name" to "Chronyx",
+             "Build-Number" to (build ?: ""),
+             "Build-Time" to buildTime.toString(),
+             "Git-Branch" to gitBranch,
+@@ -264,6 +_,7 @@
+ 
+ // Use TCA for console improvements
+ tasks.jar {
++    archiveBaseName.set("chronyx")
+     val archiveOperations = services.archiveOperations
+     from(alsoShade.elements.map {
+         it.map { f ->
+@@ -276,6 +_,18 @@
+     })
+ }
+ 
++tasks.reobfJar {
++    outputJar.set(layout.buildDirectory.file("libs/chronyx-${project.version}.jar"))
++}
++
++tasks.createReobfBundlerJar {
++    outputZip.set(layout.buildDirectory.file("libs/chronyx-bundler-${project.version}.jar"))
++}
++
++tasks.createReobfPaperclipJar {
++    outputZip.set(layout.buildDirectory.file("libs/chronyx-paperclip-${project.version}.jar"))
++}
++
+ tasks.test {
+     include("**/**TestSuite.class")
+     workingDir = temporaryDir
+@@ -328,25 +_,24 @@
+         .asFile
+     javaLauncher.set(project.javaToolchains.launcherFor {
+         languageVersion.set(JavaLanguageVersion.of(21))
+-        vendor.set(JvmVendorSpec.JETBRAINS)
++        vendor.set(JvmVendorSpec.GRAAL_VM)
+     })
+-    jvmArgs("-XX:+AllowEnhancedClassRedefinition")
++    jvmArgs("--add-modules=jdk.incubator.vector")
+ 
+-    if (rootProject.childProjects["test-plugin"] != null) {
+-        val testPluginJar = rootProject.project(":test-plugin").tasks.jar.flatMap { it.archiveFile }
++    if (rootProject.childProjects["canvas-test-plugin"] != null) {
++        val testPluginJar = rootProject.project(":canvas-test-plugin").tasks.jar.flatMap { it.archiveFile }
+         inputs.file(testPluginJar)
+         args("-add-plugin=${testPluginJar.get().asFile.absolutePath}")
+     }
+ 
+-    args("--nogui")
+     systemProperty("net.kyori.adventure.text.warnWhenLegacyFormattingDetected", true)
+     if (providers.gradleProperty("paper.runDisableWatchdog").getOrElse("false") == "true") {
+         systemProperty("disable.watchdog", true)
+     }
+     systemProperty("io.papermc.paper.suppress.sout.nags", true)
+ 
+-    val memoryGb = providers.gradleProperty("paper.runMemoryGb").getOrElse("2")
+-    minHeapSize = "${memoryGb}G"
++    val memoryGb = providers.gradleProperty("paper.runMemoryGb").getOrElse("9") // increased memory
++    // minHeapSize = "${memoryGb}G"
+     maxHeapSize = "${memoryGb}G"
+ 
+     doFirst {
+@@ -395,7 +_,7 @@
+ }
+ 
+ fill {
+-    project("folia")
++    project("chronyx")
+     versionFamily(paperweight.minecraftVersion.map { it.split(".", "-").takeWhile { part -> part.toIntOrNull() != null }.take(2).joinToString(".") })
+     version(paperweight.minecraftVersion)
+ 
+@@ -403,9 +_,21 @@
+         channel = BuildChannel.STABLE
+ 
+         downloads {
+-            register("server:default") {
+-                file = tasks.createMojmapPaperclipJar.flatMap { it.outputZip }
+-                nameResolver.set { project, _, version, build -> "$project-$version-$build.jar" }
++            register("bundler") {
++                file = tasks.createReobfBundlerJar.flatMap { it.outputZip }
++                nameResolver.set { project, _, version, build -> "$project-bundler-$version-$build.jar" }
++            }
++            register("paperclip") {
++                file = tasks.createReobfPaperclipJar.flatMap { it.outputZip }
++                nameResolver.set { project, _, version, build -> "$project-paperclip-$version-$build.jar" }
++            }
++            register("server") {
++                file = tasks.reobfJar.flatMap { it.outputJar }
++                nameResolver.set { project, _, version, build -> "$project-server-$version-$build.jar" }
++            }
++            register("local") {
++                file = tasks.jar.flatMap { it.archiveFile }
++                nameResolver.set { project, _, version, build -> "$project-local-$version-$build.jar" }
+             }
+         }
+     }

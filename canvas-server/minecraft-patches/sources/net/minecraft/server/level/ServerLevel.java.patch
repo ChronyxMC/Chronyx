@@ -1,0 +1,201 @@
+--- a/net/minecraft/server/level/ServerLevel.java
++++ b/net/minecraft/server/level/ServerLevel.java
+@@ -366,6 +_,57 @@
+         return this.chunkLoader;
+     }
+ 
++    // Canvas start - region threading
++    public final void canvas$loadOrRunAtChunksAsync(final BlockPos pos, final int radiusBlocks,
++                                                    final ca.spottedleaf.concurrentutil.util.Priority priority,
++                                                    final Runnable callback) {
++        if (ca.spottedleaf.moonrise.common.util.TickThread.isTickThreadFor(
++            this, pos, radiusBlocks
++        )) {
++            // already on the running region, run callback
++            callback.run();
++        } else if (moonrise$areChunksLoaded(
++            (pos.getX() - radiusBlocks) >> 4,
++            (pos.getX() + radiusBlocks) >> 4,
++            (pos.getZ() - radiusBlocks) >> 4,
++            (pos.getZ() + radiusBlocks) >> 4
++        )) {
++            // chunks are loaded, schedule callback
++            io.papermc.paper.threadedregions.RegionizedServer.getInstance().taskQueue.queueTickTaskQueue(
++                this, pos.getX() >> 4, pos.getZ() >> 4, callback, priority
++            );
++        } else {
++            // chunks are not loaded, schedule load and callback
++            moonrise$loadChunksAsync(
++                pos, radiusBlocks, priority, (unused) -> callback.run()
++            );
++        }
++    }
++
++    public final void canvas$loadOrRunAtChunksAsync(final int minChunkX, final int maxChunkX, final int minChunkZ, final int maxChunkZ,
++                                                    final ca.spottedleaf.concurrentutil.util.Priority priority,
++                                                    final Runnable callback) {
++        if (ca.spottedleaf.moonrise.common.util.TickThread.isTickThreadFor(
++            this, minChunkX, minChunkZ, maxChunkX, maxChunkZ
++        )) {
++            // already on the running region, run callback
++            callback.run();
++        } else if (moonrise$areChunksLoaded(
++            minChunkX, minChunkZ, maxChunkX, maxChunkZ
++        )) {
++            // chunks are loaded, schedule callback
++            io.papermc.paper.threadedregions.RegionizedServer.getInstance().taskQueue.queueTickTaskQueue(
++                this, minChunkX, minChunkZ, callback, priority
++            );
++        } else {
++            // chunks are not loaded, schedule load and callback
++            moonrise$loadChunksAsync(
++                minChunkX, minChunkZ, maxChunkX, maxChunkZ, priority, (unused) -> callback.run()
++            );
++        }
++    }
++
++    // Canvas end - region threading
+     @Override
+     public final void moonrise$loadChunksAsync(final BlockPos pos, final int radiusBlocks,
+                                                final ca.spottedleaf.concurrentutil.util.Priority priority,
+@@ -632,6 +_,14 @@
+         // Paper end - rewrite chunk system
+         this.getCraftServer().addWorld(this.getWorld()); // CraftBukkit
+         this.updateTickData(); // Folia - region threading - make sure it is initialised before ticked
++        // Canvas start - per world distance
++        int viewDistance = this.serverLevelData.canvas$distanceConfig.viewDistanceOrDefault();
++        this.chunkSource.setViewDistance(viewDistance - 1);
++
++        int simulationDistance = this.serverLevelData.canvas$distanceConfig.simulationDistanceOrDefault();
++        this.chunkSource.setSimulationDistance(simulationDistance - 1);
++        // Canvas end - per world distance
++        new io.canvasmc.canvas.event.WorldPreLoadEvent(getWorld(), io.canvasmc.canvas.event.WorldPreLoadEvent.Stage.CONSTRUCTED).callEvent(); // Canvas - world pre load event
+     }
+ 
+     // Folia start - region threading
+@@ -654,6 +_,7 @@
+     public static final int WORLD_INIT_CHECKED = 2;
+     public final java.util.concurrent.atomic.AtomicInteger checkInitialised = new java.util.concurrent.atomic.AtomicInteger(WORLD_INIT_NOT_CHECKED);
+     public ChunkPos randomSpawnSelection;
++    public final io.canvasmc.canvas.util.ticket.TicketHolder<io.canvasmc.canvas.util.ticket.UnloadTicket> canvas$worldUnloadTicket = new io.canvasmc.canvas.util.ticket.TicketHolder<>(); // Canvas - rewrite world load and unload
+ 
+     public static final record PendingTeleport(Entity.EntityTreeNode rootVehicle, Vec3 to) {}
+     private final it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<PendingTeleport> pendingTeleports = new it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<>();
+@@ -886,10 +_,10 @@
+     // Paper start - optimise random ticking
+     private final io.papermc.paper.threadedregions.util.SimpleThreadLocalRandomSource simpleRandom = io.papermc.paper.threadedregions.util.SimpleThreadLocalRandomSource.INSTANCE; // Folia - region threading
+ 
+-    private void optimiseRandomTick(final LevelChunk chunk, final int tickSpeed) {
++    private void optimiseRandomTick(final LevelChunk chunk, final int tickSpeed, io.papermc.paper.threadedregions.RegionizedWorldData worldData) { // Canvas - optimize random tick
+         final LevelChunkSection[] sections = chunk.getSections();
+         final int minSection = ca.spottedleaf.moonrise.common.util.WorldUtil.getMinSection((ServerLevel)(Object)this);
+-        final io.papermc.paper.threadedregions.util.SimpleThreadLocalRandomSource simpleRandom = this.simpleRandom; // Folia - region threading
++        // final io.papermc.paper.threadedregions.util.SimpleThreadLocalRandomSource simpleRandom = this.simpleRandom; // Folia - region threading // Canvas - optimize random tick
+         final boolean doubleTickFluids = !ca.spottedleaf.moonrise.common.PlatformHooks.get().configFixMC224294();
+ 
+         final ChunkPos cpos = chunk.getPos();
+@@ -908,7 +_,7 @@
+ 
+             for (int i = 0; i < tickSpeed; ++i) {
+                 final int tickingBlocks = tickList.size();
+-                final int index = simpleRandom.nextInt() & ((16 * 16 * 16) - 1);
++                final int index = worldData.simpleUnsafeLocalRandom.nextInt() & ((16 * 16 * 16) - 1); // Canvas - optimize random tick
+ 
+                 if (index >= tickingBlocks) {
+                     // most of the time we fall here
+@@ -921,11 +_,11 @@
+                 // do not use a mutable pos, as some random tick implementations store the input without calling immutable()!
+                 final BlockPos pos = new BlockPos((location & 15) | offsetX, ((location >>> (4 + 4)) & 15) | offsetY, ((location >>> 4) & 15) | offsetZ);
+ 
+-                state.randomTick((ServerLevel)(Object)this, pos, simpleRandom);
++                state.randomTick(this, pos, worldData.simpleUnsafeLocalRandom); // Canvas - optimize random tick
+                 if (doubleTickFluids) {
+                     final FluidState fluidState = state.getFluidState();
+                     if (fluidState.isRandomlyTicking()) {
+-                        fluidState.randomTick((ServerLevel)(Object)this, pos, simpleRandom);
++                        fluidState.randomTick(this, pos, worldData.simpleUnsafeLocalRandom); // Canvas - optimize random tick
+                     }
+                 }
+             }
+@@ -935,22 +_,21 @@
+     }
+     // Paper end - optimise random ticking
+ 
+-    public void tickChunk(LevelChunk chunk, int randomTickSpeed) {
+-        final io.papermc.paper.threadedregions.util.SimpleThreadLocalRandomSource simpleRandom = this.simpleRandom; // Paper - optimise random ticking // Folia - region threading
++    public void tickChunk(LevelChunk chunk, int randomTickSpeed, io.papermc.paper.threadedregions.RegionizedWorldData worldData) { // Canvas - optimize random tick
+         ChunkPos pos = chunk.getPos();
+         int minBlockX = pos.getMinBlockX();
+         int minBlockZ = pos.getMinBlockZ();
+ 
+         if (!this.paperConfig().environment.disableIceAndSnow) { // Paper - Option to disable ice and snow
+         for (int i = 0; i < randomTickSpeed; i++) {
+-            if (simpleRandom.nextInt(48) == 0) {  // Paper - optimise random ticking
++            if (worldData.simpleUnsafeLocalRandom.nextInt(48) == 0) {  // Paper - optimise random ticking // Canvas - optimize random tick
+                 this.tickPrecipitation(this.getBlockRandomPos(minBlockX, 0, minBlockZ, 15));
+             }
+         }
+         } // Paper - Option to disable ice and snow
+ 
+         if (randomTickSpeed > 0) {
+-            this.optimiseRandomTick(chunk, randomTickSpeed); // Paper - optimise random ticking
++            this.optimiseRandomTick(chunk, randomTickSpeed, worldData); // Paper - optimise random ticking // Canvas - optimize random tick
+         }
+     }
+ 
+@@ -959,7 +_,7 @@
+         boolean isRaining = this.isRaining();
+         int minBlockX = pos.getMinBlockX();
+         int minBlockZ = pos.getMinBlockZ();
+-        if (!this.paperConfig().environment.disableThunder && isRaining && this.isThundering() && this.spigotConfig.thunderChance > 0 && this.random.nextInt(this.spigotConfig.thunderChance) == 0) { // Spigot // Paper - Option to disable thunder
++        if (!this.paperConfig().environment.disableThunder && isRaining && this.isThundering() && this.spigotConfig.thunderChance > 0 && /*simpleRandom.nextInt(this.spigotConfig.thunderChance) == 0*/ chunk.shouldDoLightning(this.simpleRandom)) { // Spigot // Paper - Option to disable thunder // Paper - optimise random ticking // Pufferfish - replace random with shouldDoLightning
+             BlockPos blockPos = this.findLightningTargetAround(this.getBlockRandomPos(minBlockX, 0, minBlockZ, 15));
+             if (this.isRainingAt(blockPos)) {
+                 DifficultyInstance currentDifficultyAt = this.getCurrentDifficultyAt(blockPos);
+@@ -1106,7 +_,8 @@
+     }
+ 
+     public ServerWaypointManager getWaypointManager() {
+-        return this.waypointManager;
++        if (io.canvasmc.canvas.Config.INSTANCE.disableWaypointsFix) return this.waypointManager; // Canvas - region threading - restore waypoints
++        return this.getCurrentWorldData().waypointManager; // Canvas - region threading - restore waypoints
+     }
+ 
+     public void advanceWeatherCycle() { // Folia - region threading - public
+@@ -1628,7 +_,7 @@
+ 
+     public void unload(LevelChunk chunk) {
+         // Spigot start
+-        for (net.minecraft.world.level.block.entity.BlockEntity blockEntity : chunk.getBlockEntities().values()) {
++        for (net.minecraft.world.level.block.entity.BlockEntity blockEntity : chunk.canvas$getAllBlockEntities()) { // Canvas - optimize block entity fetching
+             if (blockEntity instanceof net.minecraft.world.Container) {
+                 // Paper start - this area looks like it can load chunks, change the behavior
+                 // chests for example can apply physics to the world
+@@ -2441,6 +_,7 @@
+ 
+         for (TickingBlockEntity tickingBlockEntity : (Iterable<? extends net.minecraft.world.level.block.entity.TickingBlockEntity>)null) { // Folia - region threading
+             BlockPos pos = tickingBlockEntity.getPos();
++            if (tickingBlockEntity instanceof net.minecraft.world.level.chunk.LevelChunk.RebindableTickingBlockEntityWrapper rebindable && rebindable.ticker instanceof io.canvasmc.canvas.chunk.block.SleepingBlockEntity.SleepingTicker sleepingTicker) pos = sleepingTicker.getPosForRegionOperation(); // Canvas - block entity sleeping
+             csvOutput.writeRow(pos.getX(), pos.getY(), pos.getZ(), tickingBlockEntity.getType());
+         }
+     }
+@@ -2733,9 +_,7 @@
+             // ServerLevel.this.getChunkSource().addEntity(entity); // Paper - ignore and warn about illegal addEntity calls instead of crashing server; moved down below valid=true
+             if (entity instanceof ServerPlayer serverPlayer) {
+                 ServerLevel.this.players.add(serverPlayer);
+-                if (serverPlayer.isReceivingWaypoints()) {
+-                    ServerLevel.this.getWaypointManager().addPlayer(serverPlayer);
+-                }
++                // Canvas - region threading - restore waypoints - this is handled elsewhere
+ 
+                 ServerLevel.this.updateSleepingPlayerList();
+             }
+@@ -2820,7 +_,7 @@
+             ServerLevel.this.getChunkSource().removeEntity(entity);
+             if (entity instanceof ServerPlayer serverPlayer) {
+                 ServerLevel.this.players.remove(serverPlayer);
+-                ServerLevel.this.getWaypointManager().removePlayer(serverPlayer);
++                // Canvas - region threading - restore waypoints - this is handled elsewhere
+                 ServerLevel.this.updateSleepingPlayerList();
+             }
+ 
