@@ -38,7 +38,7 @@ jobs:
       run: ./gradlew applyAllPatches --stacktrace --no-daemon
       
     - name: Build Mojmap Publisher Jar
-      run: ./gradlew createMojmapPublisherJar --stacktrace --no-daemon
+      run: ./gradlew buildMojmapPublisherJar --stacktrace --no-daemon
       env:
         BUILD_NUMBER: ${{ github.run_number }}
         
@@ -46,12 +46,12 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: chronyx-jars
-        path: baguette-server/build/libs/*.jar
+        path: canvas-server/build/libs/*.jar
         if-no-files-found: error
         
     - name: Create zip archive
       run: |
-        cd baguette-server/build/libs
+        cd canvas-server/build/libs
         zip -r ../../../chronyx-build-${{ github.run_number }}.zip *.jar
         
     - name: Upload zip archive
