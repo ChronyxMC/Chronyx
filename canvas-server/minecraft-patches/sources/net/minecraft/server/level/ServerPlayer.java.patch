@@ -227,7 +227,7 @@
                      boolean isBed = respawnWorld.getBlockState(respawnConfig.pos()).is(net.minecraft.tags.BlockTags.BEDS);
                      usedRespawnAnchor[0] = !alive && isRespawnAnchor;
 +                    isBedSpawn[0] = isBed; // Canvas - region threading
-++                   respawnPosAngle[0] = spawnPos;
++                    respawnPosAngle[0] = spawnPos;
  
                      // finished now, pass the location on
                      spawnPosComplete.complete(
