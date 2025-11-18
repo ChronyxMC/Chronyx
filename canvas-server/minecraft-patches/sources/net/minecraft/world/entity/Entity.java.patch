@@ -279,7 +279,7 @@
          if ((teleportFlags & TELEPORT_FLAG_UNMOUNT) == 0L) {
              for (Entity entity : this.getIndirectPassengers()) {
                  if (!entity.canTeleportAsync()) {
-@@ -4361,21 +_,69 @@
+@@ -4361,21 +_,68 @@
          }
  
          if ((teleportFlags & TELEPORT_FLAG_TELEPORT_PASSENGERS) != 0L) {
